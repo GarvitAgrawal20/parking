@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Smart Parking</title>
+<style>
+  body{font-family:Arial,sans-serif;text-align:center;background:#eef2f5;margin:0;padding:16px}
+  h1{margin:8px 0 4px}
+  .slot{margin:12px auto;padding:16px;max-width:320px;background:#fff;border-radius:14px;
+        box-shadow:0 2px 6px rgba(0,0,0,.08)}
+  .slot b{display:block;font-size:26px;margin-top:6px}
+  .free{color:#1b9e3e}.busy{color:#d62828}.na{color:#888}
+  #info{color:#666;font-size:14px;margin-top:14px}
+</style>
+</head>
+<body>
+<h1>Smart Parking</h1>
+<div id="info">Loading...</div>
+
+<div class="slot">Slot 1<b id="s1" class="na">...</b></div>
+<div class="slot">Slot 2<b id="s2" class="na">...</b></div>
+<div class="slot">Slot 3<b id="s3" class="na">...</b></div>
+
+<script>
+// ===== YAHAN APNI DETAILS BHARO =====
+var CHANNEL_ID = "3549246";
+var READ_KEY   = "";     // channel Public hai to khali chhod do
+// =====================================
+
+function show(id, v){
+  var e = document.getElementById(id);
+  if (v === "1"){ e.textContent = "OCCUPIED";  e.className = "busy"; }
+  else if (v === "0"){ e.textContent = "AVAILABLE"; e.className = "free"; }
+  else { e.textContent = "..."; e.className = "na"; }
+}
+
+function load(){
+  var url = "https://api.thingspeak.com/channels/" + CHANNEL_ID + "/feeds/last.json" +
+            (READ_KEY ? "?api_key=" + READ_KEY : "");
+  var info = document.getElementById("info");
+  fetch(url, {cache:"no-store"})
+    .then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status + " - channel Public nahi hai ya ID galat hai");
+      return r.json();
+    })
+    .then(function(d){
+      if (!d || typeof d !== "object" || !d.created_at){
+        throw new Error("Channel me abhi koi data nahi hai - Arduino se pehla upload hone do");
+      }
+      show("s1", d.field1); show("s2", d.field2); show("s3", d.field3);
+      var t = new Date(d.created_at);
+      var age = (Date.now() - t.getTime()) / 1000;
+      info.textContent =
+        (age > 300 ? "Device offline? " : "Live. ") +
+        "Last update: " + t.toLocaleTimeString();
+    })
+    .catch(function(e){
+      info.textContent = "Data nahi mil raha: " + (e && e.message ? e.message : e);
+    });
+}
+load();
+setInterval(load, 5000);
+</script>
+</body>
+</html>
